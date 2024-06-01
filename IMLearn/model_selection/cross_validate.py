@@ -37,4 +37,33 @@ def cross_validate(estimator: BaseEstimator, X: np.ndarray, y: np.ndarray,
     validation_score: float
         Average validation score over folds
     """
-    raise NotImplementedError()
+    shuffle_indexes = np.arange(X.shape[0])
+    np.random.shuffle(shuffle_indexes)
+    X = X[shuffle_indexes]
+    y = y[shuffle_indexes]
+
+    X_folds = np.array_split(X, cv)
+    y_folds = np.array_split(y, cv)
+
+    errors_train = np.zeros(cv)
+    errors_validation = np.zeros(cv)
+
+    for i in range(cv):
+        train_X = np.concatenate(X_folds[:i] + X_folds[i + 1:])
+        train_y_true = np.concatenate(y_folds[:i] + y_folds[i + 1:])
+        validation_X = X_folds[i]
+        validation_y_true = y_folds[i]
+
+        # fit model - train data set
+        fitted_model = estimator.fit(train_X, train_y_true)
+
+        # predictions
+        train_y_pred = fitted_model.predict(train_X)
+        validation_y_pred = fitted_model.predict(validation_X)
+
+        # calculate errors
+        errors_train[i] = scoring(train_y_true, train_y_pred)
+        errors_validation[i] = scoring(validation_y_true, validation_y_pred)
+
+    return np.mean(errors_train), np.mean(errors_validation)
+
